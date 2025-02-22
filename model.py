@@ -18,7 +18,7 @@ options = PoseLandmarkerOptions(
 )
 
 # Open video file
-cap = cv.VideoCapture('IMG_6076.mov')
+cap = cv.VideoCapture('IMG_5901.mov')
 
 # Get frame rate
 frame_rate = cap.get(cv.CAP_PROP_FPS)
