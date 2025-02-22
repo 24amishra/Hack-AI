@@ -56,8 +56,16 @@ with PoseLandmarker.create_from_options(options) as landmarker:
         if pose_result and pose_result.pose_landmarks:
             for landmark in filtered_nodes:  # Assuming single person
                 landmark = pose_result.pose_landmarks[0][landmark]
+               
+
                 x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
+                
                 cv.circle(frame, (x, y), 3, (0, 255, 0), -1)  # Draw green circles
+        ##midx, midy = int((solutions.LEFT_SHOULDER.x + solutions.) * frame.shape[1],)       
+
+
+
+
 
         # Show the frame
         cv.imshow("Pose Detection", frame)
