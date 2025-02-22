@@ -24,6 +24,15 @@ cap = cv.VideoCapture('IMG_5901.mov')
 frame_rate = cap.get(cv.CAP_PROP_FPS)
 frame_count = 0  # Track frame index
 
+## Filter in required/desired nodes
+solutions = mp.solutions.pose.PoseLandmark
+filtered_nodes = [ solutions.LEFT_SHOULDER, 
+    solutions.RIGHT_SHOULDER, 
+    solutions.LEFT_HIP, 
+    solutions.RIGHT_HIP, 
+    solutions.LEFT_KNEE, 
+    solutions.RIGHT_KNEE ]
+
 # Process video using PoseLandmarker
 with PoseLandmarker.create_from_options(options) as landmarker:
     while cap.isOpened():
@@ -45,7 +54,8 @@ with PoseLandmarker.create_from_options(options) as landmarker:
 
         # Draw pose landmarks on frame
         if pose_result and pose_result.pose_landmarks:
-            for landmark in pose_result.pose_landmarks[0]:  # Assuming single person
+            for landmark in filtered_nodes:  # Assuming single person
+                landmark = pose_result.pose_landmarks[0][landmark]
                 x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
                 cv.circle(frame, (x, y), 3, (0, 255, 0), -1)  # Draw green circles
 
