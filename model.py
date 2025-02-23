@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 import mediapipe as mp
 import pandas as pd
+import math
 
 # Load MediaPipe pose detection
 BaseOptions = mp.tasks.BaseOptions
@@ -18,6 +19,11 @@ def calculate_angle(point1, point2, point3):
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
     angle = np.arccos(cosine_angle)
     return np.degrees(angle)
+def calculate_distance(point1,point2):
+    a = np.array(point1)
+    b = np.array(point2)
+
+    return np.linalg.norm(a - b)
 
 # Path to model
 model_path = 'pose_landmarker_lite (1).task'
@@ -29,7 +35,7 @@ options = PoseLandmarkerOptions(
 )
 
 # Open video file
-cap = cv.VideoCapture('IMG_5901.mov')
+cap = cv.VideoCapture('IMG_5954.MOV')
 
 # Get frame rate
 frame_rate = cap.get(cv.CAP_PROP_FPS)
@@ -42,10 +48,15 @@ filtered_nodes = [solutions.LEFT_SHOULDER,
                   solutions.LEFT_HIP,
                   solutions.RIGHT_HIP,
                   solutions.LEFT_KNEE,
-                  solutions.RIGHT_KNEE]
+                  solutions.RIGHT_KNEE,
+                  solutions.LEFT_HEEL,
+                  solutions.LEFT_ANKLE,
+                  solutions.LEFT_INDEX
+                  ]
 
 # Create a DataFrame to store angles
 angle_df = pd.DataFrame(columns=["Angle"])
+distance_df = pd.DataFrame(columns=["Distance"])
 
 # Process video using PoseLandmarker
 with PoseLandmarker.create_from_options(options) as landmarker:
@@ -70,18 +81,20 @@ with PoseLandmarker.create_from_options(options) as landmarker:
         leftShoulder = pd.DataFrame(columns=['X', 'Y'])
         leftHip = pd.DataFrame(columns=['X', 'Y'])
         leftKnee = pd.DataFrame(columns=['X', 'Y'])
+        leftHeel = pd.DataFrame(columns=['X', 'Y'])
+        leftAnkle = pd.DataFrame(columns=['X', 'Y'])
+        leftIndex = pd.DataFrame(columns=['X', 'Y'])
 
         # Draw pose landmarks on frame
         if pose_result and pose_result.pose_landmarks:
             for landmark in filtered_nodes:  # Assuming single person
                 node = landmark
                 landmark = pose_result.pose_landmarks[0][landmark]
-                print(landmark)
-
-                x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
+                
+                x, y ,z= int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0]),int(landmark.z * frame.shape[2])
 
                 # Create a new row with the x, y values
-                new_row = pd.DataFrame([[x, y]], columns=['X', 'Y'])
+                new_row = pd.DataFrame([[x, y,z]], columns=['X', 'Y','Z'])
 
                 # Append the new row to the corresponding DataFrame based on the node
                 if node == solutions.LEFT_SHOULDER:
@@ -90,6 +103,17 @@ with PoseLandmarker.create_from_options(options) as landmarker:
                     leftHip = pd.concat([leftHip, new_row], ignore_index=True)
                 elif node == solutions.LEFT_KNEE:
                     leftKnee = pd.concat([leftKnee, new_row], ignore_index=True)
+                elif node == solutions.LEFT_HEEL:
+                    leftHeel = pd.concat([leftHeel, new_row], ignore_index=True)
+                elif node == solutions.LEFT_ANKLE:
+                    leftAnkle = pd.concat([leftAnkle, new_row], ignore_index=True)
+                elif node == solutions.LEFT_INDEX:
+                        leftIndex = pd.concat([leftIndex, new_row], ignore_index=True)
+
+
+
+
+
 
                 cv.circle(frame, (x, y), 3, (0, 255, 0), -1)  # Draw green circles
 
@@ -98,14 +122,21 @@ with PoseLandmarker.create_from_options(options) as landmarker:
             point1 = (leftShoulder.iloc[x]['X'], leftShoulder.iloc[x]['Y'])
             point2 = (leftHip.iloc[x]['X'], leftHip.iloc[x]['Y'])
             point3 = (leftKnee.iloc[x]['X'], leftKnee.iloc[x]['Y'])
+            
+            
+            pointShoulder = (leftShoulder.iloc[x]['X'], leftShoulder.iloc[x]['Y'], leftShoulder.iloc[x]['Z'])
+            pointIndex = (leftIndex.iloc[x]['X'], leftIndex.iloc[x]['Y'], leftIndex.iloc[x]['Z'])
+            print(pointShoulder,pointIndex)
+            
+
 
             # Calculate angle
             angle = calculate_angle(point1, point2, point3)
-            print(angle)
+            distance = calculate_distance(pointShoulder,pointIndex)
 
             # Add the calculated angle to the DataFrame
             angle_df = pd.concat([angle_df, pd.DataFrame({"Angle": [angle]})], ignore_index=True)
-
+            distance_df = pd.concat([distance_df, pd.DataFrame({"Distance": [distance]})], ignore_index=True)
         # Show the frame
         cv.imshow("Pose Detection", frame)
 
@@ -116,9 +147,9 @@ with PoseLandmarker.create_from_options(options) as landmarker:
         frame_count += 1  # Increment frame count
 
 # Write the angles DataFrame to a CSV file after processing all frames
-angle_df.to_csv('angles.csv', index=False)
+distance_df.to_csv('distanceWideGrip.csv', index=False)
 
 cap.release()
 cv.destroyAllWindows()
 
-print("Angles saved to angles.csv")
+print("Distances saved to distanceIndex.csv")
