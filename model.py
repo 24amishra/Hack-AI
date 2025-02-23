@@ -1,12 +1,23 @@
 import cv2 as cv
 import numpy as np
 import mediapipe as mp
+import pandas as pd
 
 # Load MediaPipe pose detection
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
 PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
+
+def calculate_angle(point1, point2, point3):
+    a = np.array(point1)
+    b = np.array(point2)
+    c = np.array(point3)
+    ba = a - b
+    bc = c - b
+    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle = np.arccos(cosine_angle)
+    return np.degrees(angle)
 
 # Path to model
 model_path = 'pose_landmarker_lite (1).task'
@@ -26,12 +37,15 @@ frame_count = 0  # Track frame index
 
 ## Filter in required/desired nodes
 solutions = mp.solutions.pose.PoseLandmark
-filtered_nodes = [ solutions.LEFT_SHOULDER, 
-    solutions.RIGHT_SHOULDER, 
-    solutions.LEFT_HIP, 
-    solutions.RIGHT_HIP, 
-    solutions.LEFT_KNEE, 
-    solutions.RIGHT_KNEE ]
+filtered_nodes = [solutions.LEFT_SHOULDER,
+                  solutions.RIGHT_SHOULDER,
+                  solutions.LEFT_HIP,
+                  solutions.RIGHT_HIP,
+                  solutions.LEFT_KNEE,
+                  solutions.RIGHT_KNEE]
+
+# Create a DataFrame to store angles
+angle_df = pd.DataFrame(columns=["Angle"])
 
 # Process video using PoseLandmarker
 with PoseLandmarker.create_from_options(options) as landmarker:
@@ -52,20 +66,45 @@ with PoseLandmarker.create_from_options(options) as landmarker:
         # Run pose estimation (must use detect_for_video in VIDEO mode)
         pose_result = landmarker.detect_for_video(mp_image, timestamp_ms=int(timestamp_ms))
 
+        # Initialize empty DataFrames for each landmark
+        leftShoulder = pd.DataFrame(columns=['X', 'Y'])
+        leftHip = pd.DataFrame(columns=['X', 'Y'])
+        leftKnee = pd.DataFrame(columns=['X', 'Y'])
+
         # Draw pose landmarks on frame
         if pose_result and pose_result.pose_landmarks:
             for landmark in filtered_nodes:  # Assuming single person
+                node = landmark
                 landmark = pose_result.pose_landmarks[0][landmark]
-               
+                print(landmark)
 
                 x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
-                
+
+                # Create a new row with the x, y values
+                new_row = pd.DataFrame([[x, y]], columns=['X', 'Y'])
+
+                # Append the new row to the corresponding DataFrame based on the node
+                if node == solutions.LEFT_SHOULDER:
+                    leftShoulder = pd.concat([leftShoulder, new_row], ignore_index=True)
+                elif node == solutions.LEFT_HIP:
+                    leftHip = pd.concat([leftHip, new_row], ignore_index=True)
+                elif node == solutions.LEFT_KNEE:
+                    leftKnee = pd.concat([leftKnee, new_row], ignore_index=True)
+
                 cv.circle(frame, (x, y), 3, (0, 255, 0), -1)  # Draw green circles
-        ##midx, midy = int((solutions.LEFT_SHOULDER.x + solutions.) * frame.shape[1],)       
 
+        for x in range(0, leftShoulder.shape[0]):
+            # Access 'X' and 'Y' values for each landmark in the corresponding DataFrames
+            point1 = (leftShoulder.iloc[x]['X'], leftShoulder.iloc[x]['Y'])
+            point2 = (leftHip.iloc[x]['X'], leftHip.iloc[x]['Y'])
+            point3 = (leftKnee.iloc[x]['X'], leftKnee.iloc[x]['Y'])
 
+            # Calculate angle
+            angle = calculate_angle(point1, point2, point3)
+            print(angle)
 
-
+            # Add the calculated angle to the DataFrame
+            angle_df = pd.concat([angle_df, pd.DataFrame({"Angle": [angle]})], ignore_index=True)
 
         # Show the frame
         cv.imshow("Pose Detection", frame)
@@ -76,5 +115,10 @@ with PoseLandmarker.create_from_options(options) as landmarker:
 
         frame_count += 1  # Increment frame count
 
+# Write the angles DataFrame to a CSV file after processing all frames
+angle_df.to_csv('angles.csv', index=False)
+
 cap.release()
 cv.destroyAllWindows()
+
+print("Angles saved to angles.csv")
