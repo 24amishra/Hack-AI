@@ -3,6 +3,7 @@ import numpy as np
 import mediapipe as mp
 import pandas as pd
 import math
+FILENAME = '/Users/agastyamishra/Downloads/HackAI/Hack-AI/TrainingData/IMG_5917 (2).MOV'
 
 # Load MediaPipe pose detection
 BaseOptions = mp.tasks.BaseOptions
@@ -35,7 +36,7 @@ options = PoseLandmarkerOptions(
 )
 
 # Open video file
-cap = cv.VideoCapture('/Users/agastyamishra/Downloads/HackAI/Hack-AI/TrainingData/IMG_5954.MOV')
+cap = cv.VideoCapture(FILENAME)
 
 # Get frame rate
 frame_rate = cap.get(cv.CAP_PROP_FPS)
@@ -133,7 +134,7 @@ with PoseLandmarker.create_from_options(options) as landmarker:
 
 
             # Calculate angle
-            angle = calculate_angle(bendHip, bendAnkle, bendKnee)
+            angle = calculate_angle(point1, point2, point3)
             
             distance = calculate_distance(pointShoulder,pointIndex)
 
@@ -150,7 +151,8 @@ with PoseLandmarker.create_from_options(options) as landmarker:
         frame_count += 1  # Increment frame count
 
 # Write the angles DataFrame to a CSV file after processing all frames
-angle_df.to_csv('BadKneeBendAngle.csv', index=False)
+angle_df.to_csv('ExampleAngle.csv', index=False)
+distance_df.to_csv("exampleDistance.csv",index = False)
 
 cap.release()
 cv.destroyAllWindows()
