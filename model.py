@@ -35,7 +35,7 @@ options = PoseLandmarkerOptions(
 )
 
 # Open video file
-cap = cv.VideoCapture('IMG_5954.MOV')
+cap = cv.VideoCapture('/Users/agastyamishra/Downloads/HackAI/Hack-AI/TrainingData/IMG_5954.MOV')
 
 # Get frame rate
 frame_rate = cap.get(cv.CAP_PROP_FPS)
@@ -126,12 +126,15 @@ with PoseLandmarker.create_from_options(options) as landmarker:
             
             pointShoulder = (leftShoulder.iloc[x]['X'], leftShoulder.iloc[x]['Y'], leftShoulder.iloc[x]['Z'])
             pointIndex = (leftIndex.iloc[x]['X'], leftIndex.iloc[x]['Y'], leftIndex.iloc[x]['Z'])
-            print(pointShoulder,pointIndex)
-            
+
+            bendHip = (leftHip.iloc[x]['X'], leftHip.iloc[x]['Y'])  
+            bendAnkle =(leftAnkle.iloc[x]['X'], leftAnkle.iloc[x]['Y'])   
+            bendKnee =  (leftKnee.iloc[x]['X'], leftKnee.iloc[x]['Y'])  
 
 
             # Calculate angle
-            angle = calculate_angle(point1, point2, point3)
+            angle = calculate_angle(bendHip, bendAnkle, bendKnee)
+            
             distance = calculate_distance(pointShoulder,pointIndex)
 
             # Add the calculated angle to the DataFrame
@@ -147,7 +150,7 @@ with PoseLandmarker.create_from_options(options) as landmarker:
         frame_count += 1  # Increment frame count
 
 # Write the angles DataFrame to a CSV file after processing all frames
-distance_df.to_csv('distanceWideGrip.csv', index=False)
+angle_df.to_csv('BadKneeBendAngle.csv', index=False)
 
 cap.release()
 cv.destroyAllWindows()
